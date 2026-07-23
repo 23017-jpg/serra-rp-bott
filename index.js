@@ -22,7 +22,7 @@ const {
 // ==================== SERVIDOR WEB PARA O RENDER ====================
 const app = express();
 app.get('/', (req, res) => {
-  res.send('🤖 Bot do Serra RP está online e ativo!');
+  res.send('🤖 Bot do Manchester RP está online e ativo!');
 });
 
 const PORT = process.env.PORT || 3000;
@@ -50,7 +50,7 @@ const CONFIG = {
   // ID do canal onde os ficheiros de Transcript serão guardados no servidor
   TRANSCRIPT_CHANNEL_ID: '000000000000000000', // Substitui pelo ID do canal #transcripts
 
-  LOGO_URL: 'https://media.discordapp.net/attachments/1529563398772101190/1529921090170785933/image.png',
+  LOGO_URL: 'https://media.discordapp.net/attachments/1529563398772101190/1529955547158155384/gis.gif?ex=6a63d1a3&is=6a628023&hm=8c8d4adcc33a9a8b89814ee001c2986b1da8701101de1cba3efe35930e16f4d1&=&width=720&height=720',
 
   CATEGORIES: {
     unban: '1529095995164459059',
@@ -71,7 +71,7 @@ let sugestaoCounter = 1;
 const commands = [
   new SlashCommandBuilder().setName('tickets').setDescription('Envia o painel de tickets (Apenas CEO)'),
   new SlashCommandBuilder().setName('sugestoes-setup').setDescription('Envia o painel fixo da Central de Sugestões (Apenas CEO)'),
-  new SlashCommandBuilder().setName('sugerir').setDescription('Envia uma sugestão para o Serra RP')
+  new SlashCommandBuilder().setName('sugerir').setDescription('Envia uma sugestão para o Manchester RP')
     .addStringOption(option => option.setName('ideia').setDescription('Descreve a tua sugestão').setRequired(true))
 ].map(command => command.toJSON());
 
@@ -117,7 +117,7 @@ client.on('interactionCreate', async (interaction) => {
         )
         .setColor('#2b2d31')
         .setThumbnail(CONFIG.LOGO_URL)
-        .setFooter({ text: 'Serra RP · Sistema de Tickets' });
+        .setFooter({ text: 'Manchester RP · Sistema de Tickets' });
 
       const selectMenu = new StringSelectMenuBuilder()
         .setCustomId('select_ticket_type')
@@ -146,7 +146,7 @@ client.on('interactionCreate', async (interaction) => {
         .setTitle('📋 Centro de Sugestões')
         .setDescription('Deixe sua sugestão usando o comando `/sugerir`')
         .setColor('#ffffff')
-        .setFooter({ text: 'Serra RP' });
+        .setFooter({ text: 'Manchester RP' });
 
       await interaction.channel.send({ embeds: [infoEmbed] });
       return interaction.reply({ content: '✅ Painel de sugestões configurado!', ephemeral: true });
@@ -163,7 +163,7 @@ client.on('interactionCreate', async (interaction) => {
         .setTitle(`💡 Nova Sugestão - ${sugestaoCounter++}`)
         .setDescription(`> ${ideia}\n\n──────────────────────────\n👤 **Enviado por:** <@${interaction.user.id}>\n🕒 **Data/Hora:** \`${dataFormatada}\``)
         .setColor('#ffffff')
-        .setFooter({ text: 'Serra RP' })
+        .setFooter({ text: 'Manchester RP' })
         .setTimestamp();
 
       await interaction.reply({ content: '✅ A tua sugestão foi enviada com sucesso!', ephemeral: true });
@@ -317,7 +317,7 @@ client.on('interactionCreate', async (interaction) => {
         .setTitle(`${emoji} Ticket ${ticketId} — ${categoryName}`)
         .addFields(fields)
         .setColor('#2b2d31')
-        .setFooter({ text: 'SERRA RP · Suporte' });
+        .setFooter({ text: 'MANCHESTER RP · Suporte' });
 
       const mainRow = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId('claim_ticket').setLabel('Claim').setStyle(ButtonStyle.Primary).setEmoji('📋'),
@@ -341,8 +341,7 @@ client.on('interactionCreate', async (interaction) => {
   }
 
   // D) AÇÕES DOS BOTÕES DE GESTÃO DO TICKET
-if (interaction.isButton()) {
-    // Verifica se a interação vem de um servidor (guild) antes de checar cargos de staff
+  if (interaction.isButton()) {
     const isStaff = interaction.member && (interaction.member.roles.cache.has(CONFIG.STAFF_ROLE_ID) || interaction.member.permissions.has(PermissionFlagsBits.Administrator));
 
     // 1. CLAIM TICKET
@@ -379,7 +378,7 @@ if (interaction.isButton()) {
       });
     }
 
-    // 3. FECHAR TICKET (APAGA O CANAL PRIMEIRO E DEPOIS ENVIA DM AO JOGADOR COM AVALIAÇÃO E TRANSCRIPT)
+    // 3. FECHAR TICKET (APAGA O CANAL E ENVIA MENSAGEM DM COM O TRANSCRIPT)
     if (interaction.customId === 'close_ticket') {
       await interaction.reply({ content: '🔒 A fechar ticket e a gerar transcript...' });
 
@@ -393,7 +392,7 @@ if (interaction.isButton()) {
       const owner = await client.users.fetch(ownerId).catch(() => null);
       const ownerTag = owner ? owner.username : 'Desconhecido';
 
-      // Procura e gera as mensagens para o Transcript
+      // Gera as mensagens para o Transcript em .txt
       const fetchedMessages = await interaction.channel.messages.fetch({ limit: 100 });
       let transcriptText = `=====================================================================\n`;
       transcriptText += `TICKET ${ticketId} — ${categoryName}\n`;
@@ -424,58 +423,27 @@ if (interaction.isButton()) {
         }).catch(() => {});
       }
 
-      // 1. FECHA (APAGA) O CANAL PRIMEIRO
-      const channelToDelete = interaction.channel;
+      // Envia mensagem privada (DM) ao jogador com o ficheiro de transcript
+      if (owner) {
+        await owner.send({
+          content: `=====================================================================\n` +
+                   `**TICKET ${ticketId} — ${categoryName}**\n` +
+                   `**Criado por :** ${ownerTag}\n` +
+                   `**Aberto em  :** ${dataAbertura}\n` +
+                   `**Fechado por:** ${interaction.user.username}\n` +
+                   `**Fechado em :** ${dataFecho}\n\n` +
+                   `O teu ticket foi encerrado com sucesso. Segue em anexo o teu transcript.`,
+          files: [attachment]
+        }).catch(() => {});
+      }
+
+      // Apaga o canal do ticket após 2 segundos
       setTimeout(async () => {
-        await channelToDelete.delete().catch(() => {});
-
-        // 2. SÓ DEPOIS DE FECHADO ENVIA A MENSAGEM DM AO JOGADOR COM AVALIAÇÃO + TRANSCRIPT
-        if (owner) {
-          const rateRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('rate_1').setLabel('⭐ 1').setStyle(ButtonStyle.Danger),
-            new ButtonBuilder().setCustomId('rate_2').setLabel('⭐ 2').setStyle(ButtonStyle.Danger),
-            new ButtonBuilder().setCustomId('rate_3').setLabel('⭐ 3').setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder().setCustomId('rate_4').setLabel('⭐ 4').setStyle(ButtonStyle.Success),
-            new ButtonBuilder().setCustomId('rate_5').setLabel('⭐ 5').setStyle(ButtonStyle.Success)
-          );
-
-          const dmEmbed = new EmbedBuilder()
-            .setTitle(`Ticket ${ticketId} — Fechado`)
-            .setDescription(`O teu ticket **${categoryName}** foi encerrado com sucesso.\n\nAvalia o atendimento prestado pela nossa equipa abaixo:`)
-            .setColor('#2b2d31');
-
-          await owner.send({
-            content: `=====================================================================\n` +
-                     `**TICKET ${ticketId} — ${categoryName}**\n` +
-                     `**Criado por :** ${ownerTag}\n` +
-                     `**Aberto em  :** ${dataAbertura}\n` +
-                     `**Fechado por:** ${interaction.user.username}\n` +
-                     `**Fechado em :** ${dataFecho}`,
-            files: [attachment],
-            embeds: [dmEmbed],
-            components: [rateRow]
-          }).catch(() => {});
-        }
+        await interaction.channel.delete().catch(() => {});
       }, 2000);
     }
 
-    // 4. AVALIAÇÃO (CORRIGIDO PARA NÃO DAR TIMEOUT "NÃO RESPONDEU A TEMPO")
-    if (interaction.customId.startsWith('rate_')) {
-      const stars = interaction.customId.split('_')[1];
-
-      // Desativa os botões de estrelas na mensagem
-      const disabledRow = new ActionRowBuilder().addComponents(
-        interaction.message.components[0].components.map(btn => ButtonBuilder.from(btn).setDisabled(true))
-      );
-
-      // Responde instantaneamente atualizando a mensagem sem dar timeout
-      await interaction.update({
-        content: interaction.message.content + `\n\n✅ **Obrigado! Avaliaste o nosso atendimento com ${stars} ⭐.**`,
-        components: [disabledRow]
-      });
-    }
-
-    // 5. MENCIONAR PLAYER
+    // 4. MENCIONAR PLAYER
     if (interaction.customId === 'notify_member') {
       if (!isStaff) return interaction.reply({ content: '❌ Apenas a staff pode usar este botão.', ephemeral: true });
       const topicData = interaction.channel.topic ? interaction.channel.topic.split('|') : [];
@@ -486,7 +454,7 @@ if (interaction.isButton()) {
       await interaction.reply({ content: '✅ Player notificado!', ephemeral: true });
     }
 
-    // 6. ADICIONAR PLAYER
+    // 5. ADICIONAR PLAYER
     if (interaction.customId === 'add_member') {
       if (!isStaff) return interaction.reply({ content: '❌ Apenas a staff pode usar este botão.', ephemeral: true });
       const modal = new ModalBuilder().setCustomId('modal_add_player').setTitle('Adicionar Player ao Ticket');
@@ -496,17 +464,16 @@ if (interaction.isButton()) {
       return await interaction.showModal(modal);
     }
 
-    // 7. REMOVER PLAYER
+    // 6. REMOVER PLAYER
     if (interaction.customId === 'remove_member') {
       if (!isStaff) return interaction.reply({ content: '❌ Apenas a staff pode usar este botão.', ephemeral: true });
       const modal = new ModalBuilder().setCustomId('modal_remove_player').setTitle('Remover Player do Ticket');
-      modal.addComponents(new ActionRowBuilder().addComponents(
-        new TextInputBuilder().setCustomId('user_id').setLabel('ID do Utilizador').setPlaceholder('Ex: 854141780793884702').setStyle(TextInputStyle.Short).setRequired(true)
+      modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('user_id').setLabel('ID do Utilizador').setPlaceholder('Ex: 854141780793884702').setStyle(TextInputStyle.Short).setRequired(true)
       ));
       return await interaction.showModal(modal);
     }
 
-    // 8. RENOMEAR TICKET
+    // 7. RENOMEAR TICKET
     if (interaction.customId === 'rename_ticket') {
       if (!isStaff) return interaction.reply({ content: '❌ Apenas a staff pode usar este botão.', ephemeral: true });
       const modal = new ModalBuilder().setCustomId('modal_rename_ticket').setTitle('Renomear Canal de Ticket');
