@@ -47,10 +47,10 @@ const CONFIG = {
   STAFF_ROLE_ID: '1529095834958823515', 
   MEMBER_ROLE_ID: '1529095879817166888',
   
-  // ID do canal onde os ficheiros de Transcript serão guardados no servidor
+  // ID do canal onde os ficheiros de Transcript serão guardados
   TRANSCRIPT_CHANNEL_ID: '000000000000000000', // Substitui pelo ID do canal #transcripts
 
-  LOGO_URL: 'https://media.discordapp.net/attachments/1529563398772101190/1529955547158155384/gis.gif?ex=6a63d1a3&is=6a628023&hm=8c8d4adcc33a9a8b89814ee001c2986b1da8701101de1cba3efe35930e16f4d1&=&width=720&height=720',
+  LOGO_URL: 'https://media.discordapp.net/attachments/1529563398772101190/1529921090170785933/image.png',
 
   CATEGORIES: {
     unban: '1529095995164459059',
@@ -66,13 +66,29 @@ const CONFIG = {
 
 let ticketCounter = 5819;
 let sugestaoCounter = 1;
+
+// Memória temporária para guardar os participantes dos giveaways
+const activeGiveaways = new Map();
 // =======================================================
 
 const commands = [
   new SlashCommandBuilder().setName('tickets').setDescription('Envia o painel de tickets (Apenas CEO)'),
   new SlashCommandBuilder().setName('sugestoes-setup').setDescription('Envia o painel fixo da Central de Sugestões (Apenas CEO)'),
   new SlashCommandBuilder().setName('sugerir').setDescription('Envia uma sugestão para o Manchester RP')
-    .addStringOption(option => option.setName('ideia').setDescription('Descreve a tua sugestão').setRequired(true))
+    .addStringOption(option => option.setName('ideia').setDescription('Descreve a tua sugestão').setRequired(true)),
+  new SlashCommandBuilder().setName('giveaway').setDescription('Inicia um Giveaway/Sorteio no canal (Apenas Staff)')
+    .addStringOption(option => option.setName('premio').setDescription('O que vai ser sorteado?').setRequired(true))
+    .addStringOption(option => option.setName('duracao').setDescription('Escolhe a duração do sorteio').setRequired(true)
+      .addChoices(
+        { name: '⚡ 10 Segundos (Teste)', value: '10s' },
+        { name: '⏱️ 1 Hora', value: '1h' },
+        { name: '⏱️ 2 Horas', value: '2h' },
+        { name: '⏱️ 3 Horas', value: '3h' },
+        { name: '⏱️ 10 Horas', value: '10h' },
+        { name: '📅 Amanhã (24 Horas)', value: '24h' }
+      )
+    )
+    .addIntegerOption(option => option.setName('ganhadores').setDescription('Número de vencedores (padrão: 1)').setRequired(false))
 ].map(command => command.toJSON());
 
 client.once('clientReady', async () => {
@@ -96,6 +112,8 @@ client.on('interactionCreate', async (interaction) => {
 
   // A) COMANDOS SLASH
   if (interaction.isChatInputCommand()) {
+    
+    // COMANDO TICKETS
     if (interaction.commandName === 'tickets') {
       if (!interaction.member.roles.cache.has(CONFIG.CEO_ROLE_ID) && !interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
         return interaction.reply({ content: '❌ Apenas membros com o cargo de **CEO** podem executar este comando.', ephemeral: true });
@@ -137,6 +155,7 @@ client.on('interactionCreate', async (interaction) => {
       return interaction.reply({ content: '✅ Painel enviado com sucesso!', ephemeral: true });
     }
 
+    // COMANDO SUGESTOES SETUP
     if (interaction.commandName === 'sugestoes-setup') {
       if (!interaction.member.roles.cache.has(CONFIG.CEO_ROLE_ID) && !interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
         return interaction.reply({ content: '❌ Apenas membros com o cargo de **CEO** podem executar este comando.', ephemeral: true });
@@ -152,6 +171,7 @@ client.on('interactionCreate', async (interaction) => {
       return interaction.reply({ content: '✅ Painel de sugestões configurado!', ephemeral: true });
     }
 
+    // COMANDO SUGERIR
     if (interaction.commandName === 'sugerir') {
       const ideia = interaction.options.getString('ideia');
       const agora = new Date();
@@ -171,6 +191,127 @@ client.on('interactionCreate', async (interaction) => {
       await sugMsg.react('👍');
       await sugMsg.react('👎');
       await sugMsg.startThread({ name: `Sugestão de ${interaction.user.username}`, autoArchiveDuration: 1440 });
+    }
+
+    // COMANDO GIVEAWAY
+    if (interaction.commandName === 'giveaway') {
+      const isStaff = interaction.member.roles.cache.has(CONFIG.STAFF_ROLE_ID) || interaction.member.permissions.has(PermissionFlagsBits.Administrator);
+      if (!isStaff) {
+        return interaction.reply({ content: '❌ Apenas membros da **Staff** podem criar sorteios.', ephemeral: true });
+      }
+
+      const premio = interaction.options.getString('premio');
+      const duracaoEscolha = interaction.options.getString('duracao');
+      const numGanhadores = interaction.options.getInteger('ganhadores') || 1;
+
+      // Converte a escolha do utilizador para milissegundos
+      let tempoMs = 0;
+      switch (duracaoEscolha) {
+        case '10s': tempoMs = 10 * 1000; break;
+        case '1h':  tempoMs = 1 * 60 * 60 * 1000; break;
+        case '2h':  tempoMs = 2 * 60 * 60 * 1000; break;
+        case '3h':  tempoMs = 3 * 60 * 60 * 1000; break;
+        case '10h': tempoMs = 10 * 60 * 60 * 1000; break;
+        case '24h': tempoMs = 24 * 60 * 60 * 1000; break;
+        default:   tempoMs = 10 * 1000; break;
+      }
+
+      const terminaEm = Math.floor((Date.now() + tempoMs) / 1000);
+
+      const giveawayEmbed = new EmbedBuilder()
+        .setTitle(`🎉 **GIVEAWAY — ${premio}** 🎉`)
+        .setDescription(
+          `Clica no botão **🎉 Participar** abaixo para entrares no sorteio!\n\n` +
+          `🎁 **Prémio:** \`${premio}\`\n` +
+          `👑 **Criado por:** <@${interaction.user.id}>\n` +
+          `🏆 **Vencedores:** \`${numGanhadores}\`\n` +
+          `⏳ **Termina:** <t:${terminaEm}:R> (<t:${terminaEm}:f>)\n\n` +
+          `👥 **Participantes:** \`0\``
+        )
+        .setColor('#5865F2')
+        .setFooter({ text: 'Manchester RP · Giveaways' })
+        .setTimestamp(Date.now() + tempoMs);
+
+      const joinButton = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('join_giveaway')
+          .setLabel('Participar')
+          .setStyle(ButtonStyle.Success)
+          .setEmoji('🎉')
+      );
+
+      await interaction.reply({ content: '✅ Sorteio criado com sucesso!', ephemeral: true });
+      const giveawayMessage = await interaction.channel.send({ embeds: [giveawayEmbed], components: [joinButton] });
+
+      // Guardar na memória
+      activeGiveaways.set(giveawayMessage.id, {
+        premio,
+        numGanhadores,
+        hostId: interaction.user.id,
+        participants: new Set(),
+        messageId: giveawayMessage.id,
+        channelId: interaction.channel.id
+      });
+
+      // Temporizador para o final do Giveaway
+      setTimeout(async () => {
+        const giveawayData = activeGiveaways.get(giveawayMessage.id);
+        if (!giveawayData) return;
+
+        const channel = await client.channels.fetch(giveawayData.channelId).catch(() => null);
+        if (!channel) return;
+
+        const msg = await channel.messages.fetch(giveawayData.messageId).catch(() => null);
+        if (!msg) return;
+
+        const ArrayParticipantes = Array.from(giveawayData.participants);
+
+        // Botão desativado para o fim
+        const disabledButton = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId('join_giveaway_ended')
+            .setLabel('Sorteio Encerrado')
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(true)
+            .setEmoji('🔒')
+        );
+
+        if (ArrayParticipantes.length === 0) {
+          const endedEmbed = EmbedBuilder.from(msg.embeds[0])
+            .setTitle(`🎉 **GIVEAWAY ENCERRADO — ${premio}** 🎉`)
+            .setDescription(`❌ **Sorteio cancelado:** Não houve participantes suficientes.`)
+            .setColor('#ED4245');
+
+          await msg.edit({ embeds: [endedEmbed], components: [disabledButton] });
+          await channel.send({ content: `❌ O giveaway de **${premio}** foi encerrado sem vencedores por falta de participantes.` });
+        } else {
+          // Sortear vencedores aleatórios
+          const vencedores = [];
+          const numVencedoresReais = Math.min(giveawayData.numGanhadores, ArrayParticipantes.length);
+
+          for (let i = 0; i < numVencedoresReais; i++) {
+            const randomIndex = Math.floor(Math.random() * ArrayParticipantes.length);
+            vencedores.push(ArrayParticipantes.splice(randomIndex, 1)[0]);
+          }
+
+          const listaVencedores = vencedores.map(id => `<@${id}>`).join(', ');
+
+          const endedEmbed = EmbedBuilder.from(msg.embeds[0])
+            .setTitle(`🎉 **GIVEAWAY ENCERRADO — ${premio}** 🎉`)
+            .setDescription(
+              `🎁 **Prémio:** \`${premio}\`\n` +
+              `👑 **Criado por:** <@${giveawayData.hostId}>\n` +
+              `🏆 **Vencedor(es):** ${listaVencedores}\n` +
+              `👥 **Total de Participantes:** \`${giveawayData.participants.size}\``
+            )
+            .setColor('#57F287');
+
+          await msg.edit({ embeds: [endedEmbed], components: [disabledButton] });
+          await channel.send({ content: `🎉 **PARABÉNS** ${listaVencedores}! Ganhaste o giveaway de **${premio}**! 🥳` });
+        }
+
+        activeGiveaways.delete(giveawayMessage.id);
+      }, tempoMs);
     }
   }
 
@@ -340,8 +481,43 @@ client.on('interactionCreate', async (interaction) => {
     }
   }
 
-  // D) AÇÕES DOS BOTÕES DE GESTÃO DO TICKET
+  // D) AÇÕES DOS BOTÕES (GIVEAWAYS & TICKETS)
   if (interaction.isButton()) {
+
+    // PARTICIPAR NO GIVEAWAY
+    if (interaction.customId === 'join_giveaway') {
+      const giveawayData = activeGiveaways.get(interaction.message.id);
+      if (!giveawayData) {
+        return interaction.reply({ content: '❌ Este giveaway já não se encontra ativo.', ephemeral: true });
+      }
+
+      if (giveawayData.participants.has(interaction.user.id)) {
+        giveawayData.participants.delete(interaction.user.id);
+        
+        // Atualizar contador no embed
+        const updatedDescription = interaction.message.embeds[0].description.replace(
+          /👥 \*\*Participantes:\*\* `\d+`/,
+          `👥 **Participantes:** \`${giveawayData.participants.size}\``
+        );
+        const updatedEmbed = EmbedBuilder.from(interaction.message.embeds[0]).setDescription(updatedDescription);
+        await interaction.message.edit({ embeds: [updatedEmbed] });
+
+        return interaction.reply({ content: '🏃 Saíste da participação do giveaway.', ephemeral: true });
+      } else {
+        giveawayData.participants.add(interaction.user.id);
+
+        // Atualizar contador no embed
+        const updatedDescription = interaction.message.embeds[0].description.replace(
+          /👥 \*\*Participantes:\*\* `\d+`/,
+          `👥 **Participantes:** \`${giveawayData.participants.size}\``
+        );
+        const updatedEmbed = EmbedBuilder.from(interaction.message.embeds[0]).setDescription(updatedDescription);
+        await interaction.message.edit({ embeds: [updatedEmbed] });
+
+        return interaction.reply({ content: '🎉 Entraste no giveaway com sucesso! Boa sorte!', ephemeral: true });
+      }
+    }
+
     const isStaff = interaction.member && (interaction.member.roles.cache.has(CONFIG.STAFF_ROLE_ID) || interaction.member.permissions.has(PermissionFlagsBits.Administrator));
 
     // 1. CLAIM TICKET
@@ -378,7 +554,7 @@ client.on('interactionCreate', async (interaction) => {
       });
     }
 
-    // 3. FECHAR TICKET (APAGA O CANAL E ENVIA MENSAGEM DM COM O TRANSCRIPT)
+    // 3. FECHAR TICKET
     if (interaction.customId === 'close_ticket') {
       await interaction.reply({ content: '🔒 A fechar ticket e a gerar transcript...' });
 
@@ -392,7 +568,6 @@ client.on('interactionCreate', async (interaction) => {
       const owner = await client.users.fetch(ownerId).catch(() => null);
       const ownerTag = owner ? owner.username : 'Desconhecido';
 
-      // Gera as mensagens para o Transcript em .txt
       const fetchedMessages = await interaction.channel.messages.fetch({ limit: 100 });
       let transcriptText = `=====================================================================\n`;
       transcriptText += `TICKET ${ticketId} — ${categoryName}\n`;
@@ -409,7 +584,6 @@ client.on('interactionCreate', async (interaction) => {
       const buffer = Buffer.from(transcriptText, 'utf-8');
       const attachment = new AttachmentBuilder(buffer, { name: `${interaction.channel.name}.txt` });
 
-      // Envia transcript para o canal de registos da Staff no servidor
       const transcriptChannel = interaction.guild.channels.cache.get(CONFIG.TRANSCRIPT_CHANNEL_ID);
       if (transcriptChannel) {
         await transcriptChannel.send({
@@ -423,7 +597,6 @@ client.on('interactionCreate', async (interaction) => {
         }).catch(() => {});
       }
 
-      // Envia mensagem privada (DM) ao jogador com o ficheiro de transcript
       if (owner) {
         await owner.send({
           content: `=====================================================================\n` +
@@ -437,7 +610,6 @@ client.on('interactionCreate', async (interaction) => {
         }).catch(() => {});
       }
 
-      // Apaga o canal do ticket após 2 segundos
       setTimeout(async () => {
         await interaction.channel.delete().catch(() => {});
       }, 2000);
@@ -468,7 +640,8 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId === 'remove_member') {
       if (!isStaff) return interaction.reply({ content: '❌ Apenas a staff pode usar este botão.', ephemeral: true });
       const modal = new ModalBuilder().setCustomId('modal_remove_player').setTitle('Remover Player do Ticket');
-      modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('user_id').setLabel('ID do Utilizador').setPlaceholder('Ex: 854141780793884702').setStyle(TextInputStyle.Short).setRequired(true)
+      modal.addComponents(new ActionRowBuilder().addComponents(
+        new TextInputBuilder().setCustomId('user_id').setLabel('ID do Utilizador').setPlaceholder('Ex: 854141780793884702').setStyle(TextInputStyle.Short).setRequired(true)
       ));
       return await interaction.showModal(modal);
     }
