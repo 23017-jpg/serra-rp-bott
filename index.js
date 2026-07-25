@@ -204,7 +204,6 @@ client.on('interactionCreate', async (interaction) => {
       const duracaoEscolha = interaction.options.getString('duracao');
       const numGanhadores = interaction.options.getInteger('ganhadores') || 1;
 
-      // Converte a escolha do utilizador para milissegundos
       let tempoMs = 0;
       switch (duracaoEscolha) {
         case '10s': tempoMs = 10 * 1000; break;
@@ -266,7 +265,6 @@ client.on('interactionCreate', async (interaction) => {
 
         const ArrayParticipantes = Array.from(giveawayData.participants);
 
-        // Botão desativado para o fim
         const disabledButton = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
             .setCustomId('join_giveaway_ended')
@@ -301,13 +299,29 @@ client.on('interactionCreate', async (interaction) => {
             .setDescription(
               `🎁 **Prémio:** \`${premio}\`\n` +
               `👑 **Criado por:** <@${giveawayData.hostId}>\n` +
-              `🏆 **Vencedor(es):** ${listaVencedores}\n` +
+              `🏆 **Grande Vencedor(es):** ${listaVencedores}\n` +
               `👥 **Total de Participantes:** \`${giveawayData.participants.size}\``
             )
             .setColor('#57F287');
 
           await msg.edit({ embeds: [endedEmbed], components: [disabledButton] });
-          await channel.send({ content: `🎉 **PARABÉNS** ${listaVencedores}! Ganhaste o giveaway de **${premio}**! 🥳` });
+          
+          // Mensagem no canal
+          await channel.send({ 
+            content: `🎉 **PARABÉNS** ${listaVencedores}! Foste o grande vencedor do sorteio do prémio **${premio}**!\n\n` +
+                     `📩 **Tens 48 horas para abrir um ticket na categoria "Outros / Assuntos Gerais" para reivindicares o teu prémio!** 🥳` 
+          });
+
+          // Envia também MP (mensagem privada) para os vencedores
+          for (const winnerId of vencedores) {
+            const user = await client.users.fetch(winnerId).catch(() => null);
+            if (user) {
+              await user.send({
+                content: `🎉 **Parabéns!** Foste o grande vencedor do sorteio do prémio **${premio}** no server **Manchester RP**!\n\n` +
+                         `⚠️ **Tens 48 horas para abrir um ticket na aba de assuntos/outros para reclamares o teu prémio.**`
+              }).catch(() => {});
+            }
+          }
         }
 
         activeGiveaways.delete(giveawayMessage.id);
