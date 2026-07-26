@@ -42,6 +42,8 @@ const client = new Client({
 });
 
 // ==================== CONFIGURAÇÕES ====================
+const BANNER_GIF_URL = 'https://media.discordapp.net/attachments/1462189183568183307/1530728539672805479/gis.gif?ex=6a66a18b&is=6a65500b&hm=9092befd545905cab52c045aca657f5833503b952dbc1d39a33ecab9e8beeace&=&width=720&height=720';
+
 const CONFIG = {
   CEO_ROLE_ID: '000000000000000000', // Substitui pelo ID real do cargo CEO
   STAFF_ROLE_ID: '1529095834958823515', 
@@ -51,7 +53,7 @@ const CONFIG = {
   // ID do canal onde os ficheiros de Transcript serão guardados
   TRANSCRIPT_CHANNEL_ID: '000000000000000000', // Substitui pelo ID do canal #transcripts
 
-  LOGO_URL: 'https://media.discordapp.net/attachments/1529563398772101190/1529921090170785933/image.png',
+  LOGO_URL: BANNER_GIF_URL,
 
   CATEGORIES: {
     unban: '1529095995164459059',
@@ -136,8 +138,9 @@ client.on('interactionCreate', async (interaction) => {
           '📷 **Candidatura Streamer** — Abre ticket para te candidatares a streamer\n\n' +
           '*Abre apenas um ticket de cada vez.*'
         )
-        .setColor('#2b2d31')
+        .setColor('#8B0000')
         .setThumbnail(CONFIG.LOGO_URL)
+        .setImage(BANNER_GIF_URL)
         .setFooter({ text: 'Manchester RP · Sistema de Tickets' });
 
       const selectMenu = new StringSelectMenuBuilder()
@@ -168,6 +171,7 @@ client.on('interactionCreate', async (interaction) => {
         .setTitle('📋 Centro de Sugestões')
         .setDescription('Deixe sua sugestão usando o comando `/sugerir`')
         .setColor('#ffffff')
+        .setImage(BANNER_GIF_URL)
         .setFooter({ text: 'Manchester RP' });
 
       await interaction.channel.send({ embeds: [infoEmbed] });
@@ -196,39 +200,45 @@ client.on('interactionCreate', async (interaction) => {
       await sugMsg.startThread({ name: `Sugestão de ${interaction.user.username}`, autoArchiveDuration: 1440 });
     }
 
-    // COMANDO REQUISITOS LEGAIS
+    // COMANDO REQUISITOS LEGAIS (COM GIF ANEXADO)
     if (interaction.commandName === 'requisitoslegais') {
       const legalEmbed = new EmbedBuilder()
-        .setTitle('🏢 **Candidatura a Organização Legal**')
-        .setDescription('Para candidatares a tua facção/organização **Legal** no **Manchester RP**, deves cumprir obrigatoriamente os seguintes requisitos:')
-        .addFields(
-          { name: '👥 **Membros Mínimos**', value: '• Mínimo de **6 membros** ativos.' },
-          { name: '📸 **Fotografia da Equipa**', value: '• Anexar uma **fotografia/print** com todos os membros presentes.' },
-          { name: '🏷️ **Nome da Organização**', value: '• Indicar com clareza o **nome da organização** pretendida.' },
-          { name: '📜 **História da Organização**', value: '• Apresentar a **lore / história** da organização legal.' },
-          { name: '📅 **Reunião de Apresentação**', value: '• Marcar dia e hora para a reunião com os <@&1529095836515176621>.' }
+        .setAuthor({ name: 'MANCHESTER ROLEPLAY · GESTÃO LEGAL', iconURL: interaction.guild.iconURL() })
+        .setTitle('🏛️ **REQUISITOS PARA CANDIDATURA LEGAL**')
+        .setDescription(
+          'Para submeteres a candidatura para uma **Organização Legal** no **Manchester RP**, garante que tens e apresentas todos os pontos abaixo discriminados:'
         )
-        .setColor('#3498DB')
-        .setThumbnail(CONFIG.LOGO_URL)
-        .setFooter({ text: 'Manchester RP · Gestão de Organizações Legais' });
+        .addFields(
+          { name: '👥 **Membros Mínimos**', value: '```• Mínimo de 6 membros ativos na equipa.```', inline: false },
+          { name: '📸 **Fotografia de Grupo**', value: '```• Print/Foto no jogo com todos os 6 membros reunidos.```', inline: false },
+          { name: '🏷️ **Identificação da Organização**', value: '```• Nome exato da Organização/Facção pretendida.```', inline: false },
+          { name: '📜 **História & Lore**', value: '```• História detalhada e conceitos/objetivos da Organização.```', inline: false },
+          { name: '📅 **Reunião de Apresentação**', value: '• Agendar dia e horário para reunião presencial com os <@&1529095836515176621>.', inline: false }
+        )
+        .setColor('#1E90FF')
+        .setImage(BANNER_GIF_URL)
+        .setFooter({ text: 'Manchester RP · Requisitos Oficiais', iconURL: interaction.guild.iconURL() });
 
       return await interaction.reply({ embeds: [legalEmbed] });
     }
 
-    // COMANDO REQUISITOS ILEGAIS
+    // COMANDO REQUISITOS ILEGAIS (COM GIF ANEXADO)
     if (interaction.commandName === 'requisitosilegais') {
       const ilegalEmbed = new EmbedBuilder()
-        .setTitle('💀 **Candidatura a Organização Ilegal**')
-        .setDescription('Para candidatares o teu grupo/facção **Ilegal** no **Manchester RP**, deves cumprir obrigatoriamente os seguintes requisitos:')
-        .addFields(
-          { name: '👥 **Membros Mínimos**', value: '• Mínimo de **8 membros** ativos.' },
-          { name: '📸 **Fotografia da Equipa**', value: '• Anexar uma **fotografia/print** com as 8 pessoas presentes.' },
-          { name: '🏷️ **Nome & Estilo de Organização**', value: '• Indicar qual é a **organização pretendida**.\n• Especificar o **estilo da org** (Ex: *Máfia*, *Bairro/Gangue* ou *Lavagem*).' },
-          { name: '📅 **Reunião de Apresentação**', value: '• Marcar dia e hora para a reunião com os <@&1529095836515176621>.' }
+        .setAuthor({ name: 'MANCHESTER ROLEPLAY · GESTÃO ILEGAL', iconURL: interaction.guild.iconURL() })
+        .setTitle('💀 **REQUISITOS PARA CANDIDATURA ILEGAL**')
+        .setDescription(
+          'Para submeteres a candidatura para uma **Organização Ilegal** no **Manchester RP**, garante que tens e apresentas todos os pontos abaixo discriminados:'
         )
-        .setColor('#E74C3C')
-        .setThumbnail(CONFIG.LOGO_URL)
-        .setFooter({ text: 'Manchester RP · Gestão de Organizações Ilegais' });
+        .addFields(
+          { name: '👥 **Membros Mínimos**', value: '```• Mínimo de 8 membros ativos na equipa.```', inline: false },
+          { name: '📸 **Fotografia de Grupo**', value: '```• Print/Foto no jogo com os 8 membros reunidos.```', inline: false },
+          { name: '🏴 **Estilo & Nome da Organização**', value: '```• Nome da Organização.\n• Estilo: Máfia, Bairro/Gangue ou Lavagem.```', inline: false },
+          { name: '📅 **Reunião de Apresentação**', value: '• Agendar dia e horário para reunião presencial com os <@&1529095836515176621>.', inline: false }
+        )
+        .setColor('#8B0000')
+        .setImage(BANNER_GIF_URL)
+        .setFooter({ text: 'Manchester RP · Requisitos Oficiais', iconURL: interaction.guild.iconURL() });
 
       return await interaction.reply({ embeds: [ilegalEmbed] });
     }
@@ -267,7 +277,8 @@ client.on('interactionCreate', async (interaction) => {
           `⏳ **Termina:** <t:${terminaEm}:R> (<t:${terminaEm}:f>)\n\n` +
           `👥 **Participantes:** \`0\``
         )
-        .setColor('#5865F2')
+        .setColor('#8B0000')
+        .setImage(BANNER_GIF_URL)
         .setFooter({ text: 'Manchester RP · Giveaways' })
         .setTimestamp(Date.now() + tempoMs);
 
@@ -511,7 +522,7 @@ client.on('interactionCreate', async (interaction) => {
         .setAuthor({ name: interaction.user.username, iconURL: interaction.user.displayAvatarURL() })
         .setTitle(`${emoji} Ticket ${ticketId} — ${categoryName}`)
         .addFields(fields)
-        .setColor('#2b2d31')
+        .setColor('#8B0000')
         .setFooter({ text: 'MANCHESTER RP · Suporte' });
 
       const mainRow = new ActionRowBuilder().addComponents(
@@ -592,7 +603,7 @@ client.on('interactionCreate', async (interaction) => {
       const staffEmbed = new EmbedBuilder()
         .setTitle('🛠️ Painel de Gestão da Staff')
         .setDescription('Escolha a ação pretendida para este ticket:')
-        .setColor('#2b2d31');
+        .setColor('#8B0000');
 
       const staffRow = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId('notify_member').setLabel('Mencionar Player').setStyle(ButtonStyle.Secondary).setEmoji('🔔'),
