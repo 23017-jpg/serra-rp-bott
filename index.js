@@ -46,6 +46,7 @@ const CONFIG = {
   CEO_ROLE_ID: '000000000000000000', // Substitui pelo ID real do cargo CEO
   STAFF_ROLE_ID: '1529095834958823515', 
   MEMBER_ROLE_ID: '1529095879817166888',
+  ORGS_GESTORES_ROLE_ID: '1529095836515176621',
   
   // ID do canal onde os ficheiros de Transcript serão guardados
   TRANSCRIPT_CHANNEL_ID: '000000000000000000', // Substitui pelo ID do canal #transcripts
@@ -88,7 +89,9 @@ const commands = [
         { name: '📅 Amanhã (24 Horas)', value: '24h' }
       )
     )
-    .addIntegerOption(option => option.setName('ganhadores').setDescription('Número de vencedores (padrão: 1)').setRequired(false))
+    .addIntegerOption(option => option.setName('ganhadores').setDescription('Número de vencedores (padrão: 1)').setRequired(false)),
+  new SlashCommandBuilder().setName('requisitoslegais').setDescription('Exibe os requisitos para candidatura a Organização Legal'),
+  new SlashCommandBuilder().setName('requisitosilegais').setDescription('Exibe os requisitos para candidatura a Organização Ilegal')
 ].map(command => command.toJSON());
 
 client.once('clientReady', async () => {
@@ -191,6 +194,43 @@ client.on('interactionCreate', async (interaction) => {
       await sugMsg.react('👍');
       await sugMsg.react('👎');
       await sugMsg.startThread({ name: `Sugestão de ${interaction.user.username}`, autoArchiveDuration: 1440 });
+    }
+
+    // COMANDO REQUISITOS LEGAIS
+    if (interaction.commandName === 'requisitoslegais') {
+      const legalEmbed = new EmbedBuilder()
+        .setTitle('🏢 **Candidatura a Organização Legal**')
+        .setDescription('Para candidatares a tua facção/organização **Legal** no **Manchester RP**, deves cumprir obrigatoriamente os seguintes requisitos:')
+        .addFields(
+          { name: '👥 **Membros Mínimos**', value: '• Mínimo de **6 membros** ativos.' },
+          { name: '📸 **Fotografia da Equipa**', value: '• Anexar uma **fotografia/print** com todos os membros presentes.' },
+          { name: '🏷️ **Nome da Organização**', value: '• Indicar com clareza o **nome da organização** pretendida.' },
+          { name: '📜 **História da Organização**', value: '• Apresentar a **lore / história** da organização legal.' },
+          { name: '📅 **Reunião de Apresentação**', value: '• Marcar dia e hora para a reunião com os <@&1529095836515176621>.' }
+        )
+        .setColor('#3498DB')
+        .setThumbnail(CONFIG.LOGO_URL)
+        .setFooter({ text: 'Manchester RP · Gestão de Organizações Legais' });
+
+      return await interaction.reply({ embeds: [legalEmbed] });
+    }
+
+    // COMANDO REQUISITOS ILEGAIS
+    if (interaction.commandName === 'requisitosilegais') {
+      const ilegalEmbed = new EmbedBuilder()
+        .setTitle('💀 **Candidatura a Organização Ilegal**')
+        .setDescription('Para candidatares o teu grupo/facção **Ilegal** no **Manchester RP**, deves cumprir obrigatoriamente os seguintes requisitos:')
+        .addFields(
+          { name: '👥 **Membros Mínimos**', value: '• Mínimo de **8 membros** ativos.' },
+          { name: '📸 **Fotografia da Equipa**', value: '• Anexar uma **fotografia/print** com as 8 pessoas presentes.' },
+          { name: '🏷️ **Nome & Estilo de Organização**', value: '• Indicar qual é a **organização pretendida**.\n• Especificar o **estilo da org** (Ex: *Máfia*, *Bairro/Gangue* ou *Lavagem*).' },
+          { name: '📅 **Reunião de Apresentação**', value: '• Marcar dia e hora para a reunião com os <@&1529095836515176621>.' }
+        )
+        .setColor('#E74C3C')
+        .setThumbnail(CONFIG.LOGO_URL)
+        .setFooter({ text: 'Manchester RP · Gestão de Organizações Ilegais' });
+
+      return await interaction.reply({ embeds: [ilegalEmbed] });
     }
 
     // COMANDO GIVEAWAY
